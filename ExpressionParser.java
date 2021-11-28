@@ -1,6 +1,7 @@
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
+import java.util.function.UnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -11,7 +12,8 @@ enum TokenInfo{
 	DIV(3, 4),
 	NUMBER(9999, 5),
 	LEFTPAR(9999, 6),
-	RIGHTPAR(9999, 7);
+	RIGHTPAR(9999, 7),
+	INVALID(9999, 8);
 
 	public int prec, id;
 
@@ -84,33 +86,41 @@ class Tokenizer{
 public class ExpressionParser {
 
 	public static void main(String[] args) {
-		String expression = "((1*2)+(3/4))";
-		
-		Tokenizer tokenizer = new Tokenizer(expression);
-		Stack<Token> postfixNotation =  toPostfixNotation(tokenizer);
-		
-		String res = "";
-		for(Token token : postfixNotation){
-			System.out.print("('"+token.value+"' : "+token.info+") ");
-			res += token.value;
-		}
-		System.out.println();
-		System.out.println(res);
-		System.out.println();
-		tokenizer.reset();
-		while(tokenizer.hasNextToken()){
-			Token token = tokenizer.consume();
-			System.out.print("('"+token.value+"' : "+token.info+") ");
+		String[] expressions = {"(((((1*2)+(3/4))",
+								"((1*2)+(3/4)))))))",
+								"((1*2))))+(3/4))(((()",
+								"((1*2)+(3/4))"};
+		Tokenizer tokenizer = null;
+		Stack<Token> postfixNotation = null;
+		for(String expression : expressions){
+			tokenizer = new Tokenizer(expression);
+			postfixNotation = toPostfixNotation(tokenizer);
+			String res = "";
+			System.out.print(expression+" => ");
+			for(Token token : postfixNotation)res += token.value;
+			System.out.println(res);
+			tokenizer.reset();
 		}
 	}
 
 	static Stack<Token> toPostfixNotation(Tokenizer tokenizer){
 		Stack<Token> stack = new Stack<>();
 		Stack<Token> stackOps = new Stack<>();
-		Runnable stackOpsToStack = () -> {
+		Runnable invalidExpressionBloc = ()->{
+			stack.clear();
+			Token invalid = new Token();
+			invalid.info = TokenInfo.INVALID;
+			invalid.value = "invalid expression !";
+			stack.push(invalid);
+		};
+		UnaryOperator<Boolean> stackOpsToStack = (flag) -> {
 			while(!stackOps.isEmpty()){
-				stack.add(stackOps.pop());
+				if(flag && TokenInfo.LEFTPAR.equals(stackOps.peek().info)){
+					return true;
+				}
+				stack.push(stackOps.pop());
 			}
+			return false;
 		};
 		while(tokenizer.hasNextToken()){
 			Token token = tokenizer.consume();
@@ -130,7 +140,7 @@ public class ExpressionParser {
 						stackOps.push(token);
 					}
 					else{
-						stackOpsToStack.run();
+						stackOpsToStack.apply(false);
 						stackOps.push(token);
 					}
 					break;
@@ -138,14 +148,26 @@ public class ExpressionParser {
 					stackOps.push(token);
 					break;
 				case RIGHTPAR:
-					while(!stackOps.peek().info.equals(TokenInfo.LEFTPAR)){
+					if(stackOps.isEmpty()){
+						invalidExpressionBloc.run();
+						return stack;
+					}
+					while(!stackOps.isEmpty() && !stackOps.peek().info.equals(TokenInfo.LEFTPAR)){
 						stack.push(stackOps.pop());
+					}
+					if(!stackOps.isEmpty() && !TokenInfo.LEFTPAR.equals(stackOps.peek().info)){
+						invalidExpressionBloc.run();
+						return stack;
 					}
 					stackOps.pop();
 					break;
+				default:
+					System.out.println("Unsupported token !");
 			}
 		}
-		stackOpsToStack.run();
+		if(stackOpsToStack.apply(true)){
+			invalidExpressionBloc.run();
+		}
 		return stack;
 	}
 
