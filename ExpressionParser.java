@@ -1,3 +1,5 @@
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
@@ -81,22 +83,73 @@ class Tokenizer {
 	}
 }
 
+class InvalidExpressionException extends RuntimeException{
+	public InvalidExpressionException(){
+		super("Invalid postfix expression !");
+	}
+}
+
 public class ExpressionParser {
 
 	public static void main(String[] args) {
-		String[] expressions = { "(((((1*2)+(3/4))", "((1*2)+(3/4)))))))", "((1*2))))+(3/4))(((()", "((1*2)+(3/4))" };
+		String[] expressions = { "(((((1*2)+(3/4))", "((1*2)+(3/4)))))))", "((1*2))))+(3/4))(((()", "((1*2)+(3/4))", "3*3+3/3-3" };
 		Tokenizer tokenizer = null;
-		Stack<Token> postfixNotation = null;
 		for (String expression : expressions) {
 			tokenizer = new Tokenizer(expression);
-			postfixNotation = toPostfixNotation(tokenizer);
+			Stack<Token> postfixNotation = toPostfixNotation(tokenizer);
 			String res = "";
 			System.out.print(expression + " => ");
 			for (Token token : postfixNotation)
 				res += token.value;
-			System.out.println(res);
+			System.out.print(res);
+			try {
+				System.out.println(" => " + simulateExpression(postfixNotation));
+			} catch (InvalidExpressionException e) {
+				System.out.println(" => cannot simulate " + e.getMessage());
+			}
 			tokenizer.reset();
 		}
+	}
+
+	static int simulateExpression(Stack<Token> postfixExpression){
+		Collections.reverse(postfixExpression);
+		if(Arrays.asList(TokenInfo.ADD,TokenInfo.SUB,TokenInfo.MULT,TokenInfo.DIV,TokenInfo.INVALID).contains(postfixExpression.peek().info)){
+			throw new InvalidExpressionException();
+		}
+		Stack<Integer> stack = new Stack<>();
+		label:
+		while(!postfixExpression.isEmpty()){
+			switch(postfixExpression.peek().info){
+				case NUMBER:
+					stack.push(Integer.parseInt(postfixExpression.pop().value));
+				break;
+				case ADD:
+					stack.push(stack.pop() + stack.pop());
+					postfixExpression.pop();
+					break;
+				case SUB:{
+					int a = stack.pop();
+					int b = stack.pop();
+					stack.push(b - a);
+					postfixExpression.pop();
+				}
+					break;
+				case MULT:
+					stack.push(stack.pop() * stack.pop());
+					postfixExpression.pop();
+					break;
+				case DIV:
+					int a = stack.pop();
+					int b = stack.pop();
+					stack.push(b / a);
+					postfixExpression.pop();
+					break;
+				default:
+					System.out.println("Unsupported token during simulation !");
+					break label;
+			}
+		}
+		return stack.pop();
 	}
 
 	static Stack<Token> toPostfixNotation(Tokenizer tokenizer) {
@@ -157,7 +210,7 @@ public class ExpressionParser {
 				stackOps.pop();
 				break;
 			default:
-				System.out.println("Unsupported token !");
+				System.out.println("Unsupported token during postfix transformation!");
 			}
 		}
 		if (stackOpsToStack.apply(true)) {
