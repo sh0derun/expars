@@ -3,24 +3,31 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
-import java.util.function.UnaryOperator;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 enum TokenInfo {
-	ADD(2, 1), 
-	SUB(2, 2), 
-	MULT(3, 3), DIV(3, 4), 
-	NUMBER(9999, 5), 
-	LEFTPAR(9999, 6), 
-	RIGHTPAR(9999, 7), 
-	INVALID(9999, 8);
+	ADD(2, 1, Associv.LEFT), 
+	SUB(2, 2, Associv.LEFT), 
+	MULT(3, 3, Associv.LEFT), 
+	DIV(3, 4, Associv.LEFT), 
+	NUMBER(9999, 5, Associv.NONE), 
+	LEFTPAR(9999, 6, Associv.NONE), 
+	RIGHTPAR(9999, 7, Associv.NONE), 
+	INVALID(9999, 8, Associv.NONE);
+
+	enum Associv{
+		LEFT, RIGHT, NONE
+	}
 
 	public int prec, id;
+	public Associv associv;
 
-	TokenInfo(int prec, int id) {
+	TokenInfo(int prec, int id, Associv associv) {
 		this.prec = prec;
 		this.id = id;
+		this.associv = associv;
 	}
 }
 
@@ -117,7 +124,6 @@ public class ExpressionParser {
 			throw new InvalidExpressionException();
 		}
 		Stack<Integer> stack = new Stack<>();
-		label:
 		while(!postfixExpression.isEmpty()){
 			switch(postfixExpression.peek().info){
 				case NUMBER:
@@ -145,8 +151,7 @@ public class ExpressionParser {
 					postfixExpression.pop();
 					break;
 				default:
-					System.out.println("Unsupported token during simulation !");
-					break label;
+					throw new InvalidExpressionException();
 			}
 		}
 		return stack.pop();
@@ -162,58 +167,60 @@ public class ExpressionParser {
 			invalid.value = "invalid expression !";
 			stack.push(invalid);
 		};
-		UnaryOperator<Boolean> stackOpsToStack = (flag) -> {
+		Supplier<Boolean> stackOpsToStack = () -> {
 			while (!stackOps.isEmpty()) {
-				if (flag && TokenInfo.LEFTPAR.equals(stackOps.peek().info)) {
+				if (TokenInfo.LEFTPAR.equals(stackOps.peek().info)) {
 					return true;
 				}
 				stack.push(stackOps.pop());
 			}
 			return false;
 		};
+		tokenIterator:
 		while (tokenizer.hasNextToken()) {
 			Token token = tokenizer.consume();
 			switch (token.info) {
-			case NUMBER:
-				stack.push(token);
-				break;
-			case ADD:
-			case SUB:
-			case MULT:
-			case DIV:
-				if (stackOps.isEmpty() || token.info.prec > stackOps.peek().info.prec
-						|| stackOps.peek().info.equals(TokenInfo.LEFTPAR)) {
+				case NUMBER:
+					stack.push(token);
+					break;
+				case ADD:
+				case SUB:
+				case MULT:
+				case DIV:
+					if (stackOps.isEmpty()){
+						stackOps.push(token);
+						continue tokenIterator;
+					}
+					while(!stackOps.isEmpty() &&!TokenInfo.LEFTPAR.equals(stackOps.peek().info) && 
+							(stackOps.peek().info.prec > token.info.prec || 
+							(stackOps.peek().info.prec == token.info.prec && TokenInfo.Associv.LEFT.equals(token.info.associv)))){
+						stack.push(stackOps.pop());
+					}
 					stackOps.push(token);
-				} else if (token.info.prec == stackOps.peek().info.prec) {
-					stack.push(stackOps.pop());
+					break;
+				case LEFTPAR:
 					stackOps.push(token);
-				} else {
-					stackOpsToStack.apply(false);
-					stackOps.push(token);
-				}
-				break;
-			case LEFTPAR:
-				stackOps.push(token);
-				break;
-			case RIGHTPAR:
-				if (stackOps.isEmpty()) {
-					invalidExpressionBloc.run();
-					return stack;
-				}
-				while (!stackOps.isEmpty() && !stackOps.peek().info.equals(TokenInfo.LEFTPAR)) {
-					stack.push(stackOps.pop());
-				}
-				if (!stackOps.isEmpty() && !TokenInfo.LEFTPAR.equals(stackOps.peek().info)) {
-					invalidExpressionBloc.run();
-					return stack;
-				}
-				stackOps.pop();
-				break;
-			default:
-				System.out.println("Unsupported token during postfix transformation!");
+					break;
+				case RIGHTPAR:
+					if (stackOps.isEmpty()) {
+						invalidExpressionBloc.run();
+						return stack;
+					}
+					while (!stackOps.isEmpty() && !stackOps.peek().info.equals(TokenInfo.LEFTPAR)) {
+						stack.push(stackOps.pop());
+					}
+					if (stackOps.isEmpty() || !TokenInfo.LEFTPAR.equals(stackOps.peek().info)) {
+						invalidExpressionBloc.run();
+						return stack;
+					}
+					stackOps.pop();
+					break;
+				default:
+					System.out.println("Unsupported token during postfix transformation!");
+					break tokenIterator;
 			}
 		}
-		if (stackOpsToStack.apply(true)) {
+		if (stackOpsToStack.get()) {
 			invalidExpressionBloc.run();
 		}
 		return stack;
