@@ -7,6 +7,9 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Tokens that be used by the tokenizer
+ */
 enum TokenInfo {
 	ADD(2, 1, Associv.LEFT), 
 	SUB(2, 2, Associv.LEFT), 
@@ -17,11 +20,18 @@ enum TokenInfo {
 	RIGHTPAR(9999, 7, Associv.NONE), 
 	INVALID(9999, 8, Associv.NONE);
 
+	/**
+	 * Associativity values
+	 */
 	enum Associv{
 		LEFT, RIGHT, NONE
 	}
 
-	public int prec, id;
+	/** Token precedence */
+	public int prec;
+	/** Token id */
+	public int id;
+	/** Token associativity */
 	public Associv associv;
 
 	TokenInfo(int prec, int id, Associv associv) {
@@ -31,14 +41,24 @@ enum TokenInfo {
 	}
 }
 
+/**
+ * Token structure that holds token information and its value
+ */
 class Token {
 	TokenInfo info;
 	String value = "";
 }
 
+/**
+ * Tokenizer that tokenize expression into tokens
+ */
 class Tokenizer {
+	/** Tokenizer current position */
 	int index;
+	/** Expression that will be tokenized */
 	String expression;
+
+	/** Lookup table that maps operator to it's token */
 	private static final Map<Character, TokenInfo> lookup = new HashMap<Character, TokenInfo>();
 
 	static {
@@ -55,20 +75,27 @@ class Tokenizer {
 		this.expression = expression;
 	}
 
+	/** Check if there is a next token */
 	public boolean hasNextToken() {
 		return index < expression.length();
 	}
 
+	/** Reseting the tokenizer position */
 	public void reset() {
 		this.index = 0;
 	}
 
+	/** Advance tokenizer by one character */
 	private void forwardByChar(Token token, TokenInfo info, char value) {
 		token.info = info;
 		token.value += value;
 		index++;
 	}
 
+	/**
+	 * Consume and return next token
+	 * @return {@link Token}
+	 */
 	public Token consume() {
 		String res = expression.substring(index);
 		Token token = new Token();
@@ -90,6 +117,7 @@ class Tokenizer {
 	}
 }
 
+/** Invalid postfix expression flag */
 class InvalidExpressionException extends RuntimeException{
 	public InvalidExpressionException(){
 		super("Invalid postfix expression !");
@@ -98,6 +126,7 @@ class InvalidExpressionException extends RuntimeException{
 
 public class ExpressionParser {
 
+	/** Test main method */
 	public static void main(String[] args) {
 		String[] expressions = { "(((((1*2)+(3/4))", "((1*2)+(3/4)))))))", "((1*2))))+(3/4))(((()", "((1*2)+(3/4))", "3*3+3/3-3" };
 		Tokenizer tokenizer = null;
@@ -118,6 +147,11 @@ public class ExpressionParser {
 		}
 	}
 
+	/** 
+	 * Evaluates the postfix Expression
+	 * @param postfixExpression postfix expression stack tokens
+	 * @return result from evaluating the expression
+	 */
 	static int simulateExpression(Stack<Token> postfixExpression){
 		Collections.reverse(postfixExpression);
 		if(Arrays.asList(TokenInfo.ADD,TokenInfo.SUB,TokenInfo.MULT,TokenInfo.DIV,TokenInfo.INVALID).contains(postfixExpression.peek().info)){
@@ -157,6 +191,10 @@ public class ExpressionParser {
 		return stack.pop();
 	}
 
+	/** Tokenize infix expression and converts it to tokenized postfix expression
+	 * @param tokenizer
+	 * @return Postfix expression tokens stack
+	 */
 	static Stack<Token> toPostfixNotation(Tokenizer tokenizer) {
 		Stack<Token> stack = new Stack<>();
 		Stack<Token> stackOps = new Stack<>();
