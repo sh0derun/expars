@@ -103,7 +103,7 @@ class Tokenizer {
 
 		if (Character.isDigit(firstChar)) {
 			token.info = TokenInfo.NUMBER;
-			Pattern pattern = Pattern.compile("[0-9]{1,}");
+			Pattern pattern = Pattern.compile("[0-9]+");
 			Matcher matcher = pattern.matcher(res);
 			if (matcher.find()) {
 				String group = matcher.group();
@@ -128,22 +128,10 @@ public class ExpressionParser {
 
 	/** Test main method */
 	public static void main(String[] args) {
-		String[] expressions = { "(((((1*2)+(3/4))", "((1*2)+(3/4)))))))", "((1*2))))+(3/4))(((()", "((1*2)+(3/4))", "3*3+3/3-3" };
-		Tokenizer tokenizer = null;
-		for (String expression : expressions) {
-			tokenizer = new Tokenizer(expression);
-			Stack<Token> postfixNotation = toPostfixNotation(tokenizer);
-			String res = "";
-			System.out.print(expression + " => ");
-			for (Token token : postfixNotation)
-				res += token.value;
-			System.out.print(res);
-			try {
-				System.out.println(" => " + simulateExpression(postfixNotation));
-			} catch (InvalidExpressionException e) {
-				System.out.println(" => cannot simulate " + e.getMessage());
-			}
-			tokenizer.reset();
+		if(ExpressionParserTest.infixToPosfixToSimulationTest()){
+			System.out.println("PASSED");
+		} else{
+			System.out.println("FAILED");
 		}
 	}
 
