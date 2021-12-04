@@ -7,4 +7,4 @@ Supports only Integer numbers, parenthesis, addition, substraction, multiplicati
 ## Quick start
 
 ```terminal
-$javac ExpressionParser*.java && java ExpressionParser
+$javac ExpressionParser*.java && java ExpressionParserTest

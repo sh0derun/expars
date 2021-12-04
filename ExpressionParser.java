@@ -126,21 +126,12 @@ class InvalidExpressionException extends RuntimeException{
 
 public class ExpressionParser {
 
-	/** Test main method */
-	public static void main(String[] args) {
-		if(ExpressionParserTest.infixToPosfixToSimulationTest()){
-			System.out.println("PASSED");
-		} else{
-			System.out.println("FAILED");
-		}
-	}
-
 	/** 
 	 * Evaluates the postfix Expression
 	 * @param postfixExpression postfix expression stack tokens
 	 * @return result from evaluating the expression
 	 */
-	static int simulateExpression(Stack<Token> postfixExpression){
+	int simulateExpression(Stack<Token> postfixExpression){
 		Collections.reverse(postfixExpression);
 		if(Arrays.asList(TokenInfo.ADD,TokenInfo.SUB,TokenInfo.MULT,TokenInfo.DIV,TokenInfo.INVALID).contains(postfixExpression.peek().info)){
 			throw new InvalidExpressionException();
@@ -183,7 +174,7 @@ public class ExpressionParser {
 	 * @param tokenizer
 	 * @return Postfix expression tokens stack
 	 */
-	static Stack<Token> toPostfixNotation(Tokenizer tokenizer) {
+	Stack<Token> toPostfixNotation(Tokenizer tokenizer) {
 		Stack<Token> stack = new Stack<>();
 		Stack<Token> stackOps = new Stack<>();
 		Runnable invalidExpressionBloc = () -> {
