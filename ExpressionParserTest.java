@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
 @interface TestCase{
     String name() default "";
     boolean run() default false;
+    class NoException extends RuntimeException{}
+    Class<? extends RuntimeException> expectedException() default NoException.class;
 }
 
 class AssertionException extends RuntimeException{
@@ -50,7 +52,15 @@ public class ExpressionParserTest {
                     System.out.println("Can't access to invoked method");
                     return;
                 } catch(Exception ex){
-                    getCausedBy(Optional.of(ex)).printStackTrace();
+                    Throwable throwable = getCausedBy(Optional.of(ex));
+                    String ieen = InvalidExpressionException.class.getName();
+                    throwable.printStackTrace();
+                    System.out.println();
+                    if(ieen.equals(throwable.getClass().getName()) && ieen.equals(t.expectedException().getName())){
+                        System.out.println("******Test "+t.name()+" passed *****");
+                        System.out.println();
+                        return;
+                    }
                     System.out.println("******Test "+t.name()+" failed *****");
                     return;
                 }
@@ -69,8 +79,16 @@ public class ExpressionParserTest {
         return rootCause;
     }
 
-    @TestCase(name = "simulateFloatWithInteger", run = true)
-    public void simulateFloatWithInteger(){
+    @TestCase(name = "InvalidExpressionExceptionTest", run = true, expectedException = InvalidExpressionException.class)
+    public void InvalidExpressionExceptionTest(){
+        String expression = "+-+0*";
+        Stack<Token> postfixNotation = expressionParser.toPostfixNotation(new Tokenizer(expression));
+        System.out.println(expression + " => " + String.join(" ", postfixNotation.stream().map(x->x.value).collect(Collectors.toList())));
+        float res = expressionParser.simulateExpression(postfixNotation);
+    }
+    
+    @TestCase(name = "simulateFloatWithIntegerTest", run = true)
+    public void simulateFloatWithIntegerTest(){
         String expression = "(111.111+222.222)/333.333";
         Stack<Token> postfixNotation = expressionParser.toPostfixNotation(new Tokenizer(expression));
         float res = expressionParser.simulateExpression(postfixNotation);
