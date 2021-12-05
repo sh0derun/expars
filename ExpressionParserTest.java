@@ -3,13 +3,23 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.Stack;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
-@interface Test{
+@interface TestCase{
     String name() default "";
     boolean run() default false;
+}
+
+class AssertionException extends RuntimeException{
+    enum AssertionType{
+        TRUE, EQUAL
+    }
+    AssertionException(AssertionType type, boolean actual, boolean expected){
+        super(type + " assertion failed : expected " + expected + " but was " + actual);
+    }
 }
 
 public class ExpressionParserTest {
@@ -27,30 +37,38 @@ public class ExpressionParserTest {
         ExpressionParserTest test = new ExpressionParserTest();
         Class<ExpressionParserTest> clazz = ExpressionParserTest.class;
         Arrays.stream(clazz.getDeclaredMethods())
-        .filter(e->e.isAnnotationPresent(Test.class))
+        .filter(e->e.isAnnotationPresent(TestCase.class))
         .forEach(e->{
-            Test t = e.getAnnotation(Test.class);
+            TestCase t = e.getAnnotation(TestCase.class);
             if(t.run()){
                 System.out.println("****** Test "+t.name()+" started ******");
                 System.out.println();
-                boolean testResult = false;
                 try{
-                    testResult = (boolean)e.invoke(test);
+                    e.invoke(test);
+                } catch(IllegalAccessException ex){
+                    System.out.println("Can't access to invoked method");
+                    return;
                 } catch(Exception ex){
-                    System.out.println(ex.getMessage());
+                    getCausedBy(Optional.of(ex)).printStackTrace();
+                    System.out.println("******Test "+t.name()+" failed *****");
+                    return;
                 }
                 System.out.println();
-                if(testResult){
-                    System.out.println("****** Test "+t.name()+" passed *****");
-                } else{
-                    System.out.println("******Test "+t.name()+" failed *****");
-                }         
+                System.out.println("****** Test "+t.name()+" passed *****");
             }
         });
     }
 
-    @Test(name = "infixToPosfixToSimulationTest", run = true)
-    public boolean infixToPosfixToSimulationTest(){
+    private static Throwable getCausedBy(Optional<Throwable> throwable) {
+        Throwable rootCause = throwable.orElseGet(()->new NullPointerException());
+        while (rootCause.getCause() != null && rootCause.getCause() != rootCause) {
+            rootCause = rootCause.getCause();
+        }
+        return rootCause;
+    }
+
+    @TestCase(name = "infixToPosfixToSimulationTest", run = true)
+    public void infixToPosfixToSimulationTest(){
         int ko = 0, ok = 0, ret = 0;
 		String[] expressions = { "(((((1*2)+(3/4))", "((1*2)+(3/4)))))))", "((1*2))))+(3/4))(((()", "((1*2)+(3/4))", "3*3+3/3-3" };
 		Tokenizer tokenizer = null;
@@ -73,11 +91,12 @@ public class ExpressionParserTest {
 			}
 			tokenizer.reset();
 		}
-        if(ko == 3 && ok == 2 && ret == 9){
-            return true;
-        } else{
-            return false;
-        }
+        assertTrue(ko == 3 && ok == 2 && ret == 9);
 	}
+
+    private void assertTrue(boolean flag) throws AssertionException{
+        if(!flag)
+            throw new AssertionException(AssertionException.AssertionType.TRUE, flag, true);
+    }
 
 }
