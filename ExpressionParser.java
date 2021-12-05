@@ -15,7 +15,8 @@ enum TokenInfo {
 	SUB(2, 2, Associv.LEFT), 
 	MULT(3, 3, Associv.LEFT), 
 	DIV(3, 4, Associv.LEFT), 
-	NUMBER(9999, 5, Associv.NONE), 
+	INTEGER(9999, 5, Associv.NONE),
+	FLOAT(9999, 5, Associv.NONE), 
 	LEFTPAR(9999, 6, Associv.NONE), 
 	RIGHTPAR(9999, 7, Associv.NONE), 
 	INVALID(9999, 8, Associv.NONE);
@@ -102,12 +103,12 @@ class Tokenizer {
 		char firstChar = res.charAt(0);
 
 		if (Character.isDigit(firstChar)) {
-			token.info = TokenInfo.NUMBER;
-			Pattern pattern = Pattern.compile("[0-9]+");
+			Pattern pattern = Pattern.compile("[0-9]+(\\.[0-9]+)?");
 			Matcher matcher = pattern.matcher(res);
 			if (matcher.find()) {
 				String group = matcher.group();
 				token.value += group;
+				token.info = group.contains(".") ? TokenInfo.FLOAT : TokenInfo.INTEGER;
 				index += group.length();
 			}
 		} else {
@@ -131,37 +132,42 @@ public class ExpressionParser {
 	 * @param postfixExpression postfix expression stack tokens
 	 * @return result from evaluating the expression
 	 */
-	int simulateExpression(Stack<Token> postfixExpression){
-		Collections.reverse(postfixExpression);
-		if(Arrays.asList(TokenInfo.ADD,TokenInfo.SUB,TokenInfo.MULT,TokenInfo.DIV,TokenInfo.INVALID).contains(postfixExpression.peek().info)){
+	float simulateExpression(Stack<Token> postfixExpression){
+		Stack<Token> copy = new Stack<Token>();
+		copy.addAll(postfixExpression);
+		Collections.reverse(copy);
+		if(Arrays.asList(TokenInfo.ADD,TokenInfo.SUB,TokenInfo.MULT,TokenInfo.DIV,TokenInfo.INVALID).contains(copy.peek().info)){
 			throw new InvalidExpressionException();
 		}
-		Stack<Integer> stack = new Stack<>();
-		while(!postfixExpression.isEmpty()){
-			switch(postfixExpression.peek().info){
-				case NUMBER:
-					stack.push(Integer.parseInt(postfixExpression.pop().value));
+		Stack<Float> stack = new Stack<>();
+		while(!copy.isEmpty()){
+			switch(copy.peek().info){
+				case INTEGER:
+					stack.push((float)Integer.parseInt(copy.pop().value));
+				break;
+				case FLOAT:
+					stack.push(Float.parseFloat(copy.pop().value));
 				break;
 				case ADD:
 					stack.push(stack.pop() + stack.pop());
-					postfixExpression.pop();
+					copy.pop();
 					break;
 				case SUB:{
-					int a = stack.pop();
-					int b = stack.pop();
+					float a = stack.pop();
+					float b = stack.pop();
 					stack.push(b - a);
-					postfixExpression.pop();
+					copy.pop();
 				}
 					break;
 				case MULT:
 					stack.push(stack.pop() * stack.pop());
-					postfixExpression.pop();
+					copy.pop();
 					break;
 				case DIV:
-					int a = stack.pop();
-					int b = stack.pop();
+					float a = stack.pop();
+					float b = stack.pop();
 					stack.push(b / a);
-					postfixExpression.pop();
+					copy.pop();
 					break;
 				default:
 					throw new InvalidExpressionException();
@@ -197,7 +203,8 @@ public class ExpressionParser {
 		while (tokenizer.hasNextToken()) {
 			Token token = tokenizer.consume();
 			switch (token.info) {
-				case NUMBER:
+				case INTEGER:
+				case FLOAT:
 					stack.push(token);
 					break;
 				case ADD:

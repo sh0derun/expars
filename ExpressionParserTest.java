@@ -5,6 +5,7 @@ import java.lang.annotation.Target;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.Stack;
+import java.util.stream.Collectors;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
@@ -17,7 +18,7 @@ class AssertionException extends RuntimeException{
     enum AssertionType{
         TRUE, EQUAL
     }
-    AssertionException(AssertionType type, boolean actual, boolean expected){
+    AssertionException(AssertionType type, Object actual, Object expected){
         super(type + " assertion failed : expected " + expected + " but was " + actual);
     }
 }
@@ -33,7 +34,7 @@ public class ExpressionParserTest {
         runTests();
 	}
 
-    public static void runTests(){
+    private static void runTests(){
         ExpressionParserTest test = new ExpressionParserTest();
         Class<ExpressionParserTest> clazz = ExpressionParserTest.class;
         Arrays.stream(clazz.getDeclaredMethods())
@@ -55,16 +56,26 @@ public class ExpressionParserTest {
                 }
                 System.out.println();
                 System.out.println("****** Test "+t.name()+" passed *****");
+                System.out.println();
             }
         });
     }
 
     private static Throwable getCausedBy(Optional<Throwable> throwable) {
-        Throwable rootCause = throwable.orElseGet(()->new NullPointerException());
-        while (rootCause.getCause() != null && rootCause.getCause() != rootCause) {
-            rootCause = rootCause.getCause();
-        }
+        Throwable rootCause = null;
+        for (rootCause = throwable.orElseGet(()->new NullPointerException());
+             rootCause.getCause() != null && rootCause.getCause() != rootCause;
+             rootCause = rootCause.getCause());
         return rootCause;
+    }
+
+    @TestCase(name = "simulateFloatWithInteger", run = true)
+    public void simulateFloatWithInteger(){
+        String expression = "(111.111+222.222)/333.333";
+        Stack<Token> postfixNotation = expressionParser.toPostfixNotation(new Tokenizer(expression));
+        float res = expressionParser.simulateExpression(postfixNotation);
+		System.out.println(expression + " => " + String.join(" ", postfixNotation.stream().map(x->x.value).collect(Collectors.toList())) + " => " + res);
+        assertEquals(res, 1.0f);
     }
 
     @TestCase(name = "infixToPosfixToSimulationTest", run = true)
@@ -75,13 +86,9 @@ public class ExpressionParserTest {
 		for (String expression : expressions) {
 			tokenizer = new Tokenizer(expression);
 			Stack<Token> postfixNotation = expressionParser.toPostfixNotation(tokenizer);
-			String res = "";
-			System.out.print(expression + " => ");
-			for (Token token : postfixNotation)
-				res += token.value;
-			System.out.print(res);
+			System.out.print(expression + " => " + String.join(" ", postfixNotation.stream().map(x->x.value).collect(Collectors.toList())));
 			try {
-                int val = expressionParser.simulateExpression(postfixNotation);
+                float val = expressionParser.simulateExpression(postfixNotation);
 				System.out.println(" => " + val);
                 ok++;
                 ret += val;
@@ -97,6 +104,11 @@ public class ExpressionParserTest {
     private void assertTrue(boolean flag) throws AssertionException{
         if(!flag)
             throw new AssertionException(AssertionException.AssertionType.TRUE, flag, true);
+    }
+
+    private void assertEquals(float actual, float expected) throws AssertionException{
+        if(actual != expected)
+            throw new AssertionException(AssertionException.AssertionType.EQUAL, actual, expected);
     }
 
 }
