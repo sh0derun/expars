@@ -74,7 +74,7 @@ public class ExpressionParserTest {
             }
         });
         if(!ExpressionParserTest.PASSED){
-            System.exit(1);
+            
         }
     }
 
