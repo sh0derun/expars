@@ -17,4 +17,4 @@ jobs:
                  java-version: '11'
                  distribution: 'adopt'
             -name: compile and run with javac java
-             run: javac ExpressionParser*.java && java ExpressionParserTest 
+             run: javac ../../ExpressionParser*.java && java ../../ExpressionParserTest 
