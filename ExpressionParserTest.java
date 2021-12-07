@@ -1,4 +1,3 @@
-import java.beans.Expression;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -101,7 +100,7 @@ public class ExpressionParserTest {
         Stack<Token> postfixNotation = expressionParser.toPostfixNotation(new Tokenizer(expression));
         float res = expressionParser.simulateExpression(postfixNotation);
 		System.out.println(expression + " => " + String.join(" ", postfixNotation.stream().map(x->x.value).collect(Collectors.toList())) + " => " + res);
-        assertEquals(res, 2.0f);
+        assertEquals(res, 1.0f);
     }
 
     @TestCase(name = "infixToPosfixToSimulationTest", run = true)
