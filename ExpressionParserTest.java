@@ -74,7 +74,8 @@ public class ExpressionParserTest {
             }
         });
         if(!ExpressionParserTest.PASSED){
-            
+            //TODO: To be reviewed either exit(1) or exit with exception
+            System.exit(1);
         }
     }
 
