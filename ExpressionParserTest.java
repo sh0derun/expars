@@ -74,7 +74,7 @@ public class ExpressionParserTest {
             }
         });
         if(!ExpressionParserTest.PASSED){
-            throw new RuntimeException();
+            System.exit(1);
         }
     }
 
