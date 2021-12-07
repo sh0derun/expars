@@ -1,3 +1,4 @@
+import java.beans.Expression;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -28,6 +29,7 @@ class AssertionException extends RuntimeException{
 public class ExpressionParserTest {
 
     ExpressionParser expressionParser = new ExpressionParser();
+    static boolean PASSED = true;
 
     /** Test main method 
      * @param args Test cases to run
@@ -39,6 +41,7 @@ public class ExpressionParserTest {
     private static void runTests(){
         ExpressionParserTest test = new ExpressionParserTest();
         Class<ExpressionParserTest> clazz = ExpressionParserTest.class;
+        
         Arrays.stream(clazz.getDeclaredMethods())
         .filter(e->e.isAnnotationPresent(TestCase.class))
         .forEach(e->{
@@ -62,6 +65,7 @@ public class ExpressionParserTest {
                         return;
                     }
                     System.out.println("******Test "+t.name()+" failed *****");
+                    ExpressionParserTest.PASSED = false;
                     return;
                 }
                 System.out.println();
@@ -69,6 +73,9 @@ public class ExpressionParserTest {
                 System.out.println();
             }
         });
+        if(!ExpressionParserTest.PASSED){
+            throw new RuntimeException();
+        }
     }
 
     private static Throwable getCausedBy(Optional<Throwable> throwable) {
@@ -93,7 +100,7 @@ public class ExpressionParserTest {
         Stack<Token> postfixNotation = expressionParser.toPostfixNotation(new Tokenizer(expression));
         float res = expressionParser.simulateExpression(postfixNotation);
 		System.out.println(expression + " => " + String.join(" ", postfixNotation.stream().map(x->x.value).collect(Collectors.toList())) + " => " + res);
-        assertEquals(res, 1.0f);
+        assertEquals(res, 2.0f);
     }
 
     @TestCase(name = "infixToPosfixToSimulationTest", run = true)
